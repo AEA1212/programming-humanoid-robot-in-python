@@ -4,8 +4,7 @@
     complete the `StandingUpAgent.standing_up` function, e.g. call keyframe motion corresponds to current posture
 
 '''
-
-
+from joint_control.keyframes import leftBellyToStand, leftBackToStand
 from recognize_posture import PostureRecognitionAgent
 
 
@@ -17,6 +16,10 @@ class StandingUpAgent(PostureRecognitionAgent):
     def standing_up(self):
         posture = self.posture
         # YOUR CODE HERE
+        if(posture == 'Belly'):
+            self.keyframes = leftBellyToStand()
+        elif(posture == 'Back'):
+            self.keyframes = leftBackToStand()
 
 
 class TestStandingUpAgent(StandingUpAgent):

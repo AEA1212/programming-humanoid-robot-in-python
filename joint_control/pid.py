@@ -54,6 +54,16 @@ class PIDController(object):
         '''
         # YOUR CODE HERE
 
+        pid = self.u - (self.Kp * self.e1) + (2 * self.Kd * self.e1) / self.dt + (self.Kd * self.e2) / self.dt
+
+        self.e2 = self.e1
+        for i in range(0, len(sensor) - 1):
+            self.e1[i] = target[i] - sensor[i]
+
+        pid += (self.Kp + (self.Ki * self.dt) + self.Kd / self.dt) * self.e1
+
+        self.u = pid
+
         return self.u
 
 
@@ -76,7 +86,7 @@ class PIDAgent(SparkAgent):
         self.target_joints: target positions (dict: joint_id -> position (target)) '''
         joint_angles = np.asarray(
             [perception.joint[joint_id]  for joint_id in JOINT_CMD_NAMES])
-        target_angles = np.asarray([self.target_joints.get(joint_id, 
+        target_angles = np.asarray([self.target_joints.get(joint_id,
             perception.joint[joint_id]) for joint_id in JOINT_CMD_NAMES])
         u = self.joint_controller.control(target_angles, joint_angles)
         action.speed = dict(zip(JOINT_CMD_NAMES.keys(), u))  # dict: joint_id -> speed
