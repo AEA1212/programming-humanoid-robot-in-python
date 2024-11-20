@@ -19,9 +19,11 @@
 # add PYTHONPATH
 import os
 import sys
+
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
 
 from numpy.matlib import matrix, identity
+import numpy as np
 
 from recognize_posture import PostureRecognitionAgent
 
@@ -36,8 +38,12 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         self.transforms = {n: identity(4) for n in self.joint_names}
 
         # chains defines the name of chain and joints of the chain
-        self.chains = {'Head': ['HeadYaw', 'HeadPitch']
+        self.chains = {'Head': ['HeadYaw', 'HeadPitch'],
                        # YOUR CODE HERE
+                       'LArm': ['LShoulderPitch', 'LShoulderRoll', 'LElbowYaw', 'LElbowRoll'],
+                       'RArm': ['RShoulderPitch', 'RShoulderRoll', 'RElbowYaw', 'RElbowRoll'],
+                       'LLeg': ['LHipYawPitch', 'LHipRoll', 'LHipPitch', 'LKneePitch', 'LAnklePitch', 'LAnkleRoll'],
+                       'RLeg': ['RHipYawPitch', 'RHipRoll', 'RHipPitch', 'RKneePitch', 'RAnklePitch', 'RAnkleRoll']
                        }
 
     def think(self, perception):
@@ -52,8 +58,50 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         :return: transformation
         :rtype: 4x4 matrix
         '''
+
+        # final rotation matrix R = Rz Ry Rx
+        # Rz = [[c,-s,0],[s,c,0],[0,0,1]]
+        # Ry = [[c,0,s],[0,1,0],[-s,0,c]]
+        # Rx = [[1,0,0],[0,c,-s],[0,s,c]]
+
+        # axis-angle parameters
+        # cos(theta) = (tr(R) -1) / 2
+        # k = 1/(2sin(theta)) . [[r32 -r23][r13 -r31][r21 -r12]]
+
+        # quaternion parameters
+        # eta = cos(theta/2)
+        # epsiolon = k.sin(theta/2)
+
         T = identity(4)
         # YOUR CODE HERE
+        sin_angle = np.sin(joint_angle)
+        cos_angle = np.cos(joint_angle)
+
+        Rz = [[cos_angle, -sin_angle, 0, 0],
+              [sin_angle, cos_angle, 0, 0],
+              [0, 0, 1, 0],
+              [0, 0, 0, 1]]
+
+        Ry = [[cos_angle, 0, sin_angle, 0],
+              [0, 1, 0, 0],
+              [-sin_angle, 0, cos_angle, 0],
+              [0, 0, 0, 1]]
+
+        Rx = [[1, 0, 0, 0],
+              [0, cos_angle, -sin_angle, 0],
+              [0, sin_angle, cos_angle, 0],
+              [0, 0, 0, 1]]
+
+
+        if(joint_name.endswith('YawPitch')):
+            T = np.dot(Rz, Ry)
+        elif(joint_name.endswith('Yaw')):
+            T = Rz
+        elif(joint_name.endswith('Pitch')):
+            T = Ry
+        else:
+            T = Rx
+
 
         return T
 
@@ -68,9 +116,12 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
                 angle = joints[joint]
                 Tl = self.local_trans(joint, angle)
                 # YOUR CODE HERE
+                T = np.dot(T, Tl)
 
                 self.transforms[joint] = T
+
 
 if __name__ == '__main__':
     agent = ForwardKinematicsAgent()
     agent.run()
+

@@ -8,11 +8,12 @@
     Let the robot execute different keyframes, and recognize these postures.
 
 '''
-
+from PIL.TiffTags import ASCII
 
 from angle_interpolation import AngleInterpolationAgent
-from keyframes import hello
+from keyframes import hello, leftBackToStand, wipe_forehead
 import pickle
+from os import listdir, path
 
 
 class PostureRecognitionAgent(AngleInterpolationAgent):
@@ -23,7 +24,7 @@ class PostureRecognitionAgent(AngleInterpolationAgent):
                  sync_mode=True):
         super(PostureRecognitionAgent, self).__init__(simspark_ip, simspark_port, teamname, player_id, sync_mode)
         self.posture = 'unknown'
-        self.posture_classifier = pickle.load(open("robot_pose.pkl"))  # LOAD YOUR CLASSIFIER
+        self.posture_classifier = pickle.load(open(file='robot_pose.pkl', mode ='rb'))  # LOAD YOUR CLASSIFIER
 
     def think(self, perception):
         self.posture = self.recognize_posture(perception)
@@ -32,22 +33,22 @@ class PostureRecognitionAgent(AngleInterpolationAgent):
     def recognize_posture(self, perception):
         posture = 'unknown'
         # YOUR CODE HERE
-        position_fet = []
-        position_fet.extend(perception)
-        print (position_fet)
 
-        joints = ['LHipYawPitch', 'LHipRoll', 'LHipPitch', 'LKneePitch', 'RHipYawPitch', 'RHipRoll', 'RHipPitch',
-                  'RKneePitch']
 
-        for j in joints:
-            position_fet.append(perception.joint[j])
+        classes = listdir(path.join('..', 'joint_control', 'robot_pose_data'))
 
-        posture = self.classes[self.posture_classifier.predict(position_fet)]
-        print(posture)
+        data = [perception.joint[joint_name] for joint_name in ['LHipYawPitch', 'LHipRoll', 'LHipPitch', 'LKneePitch', 'RHipYawPitch', 'RHipRoll', 'RHipPitch', 'RKneePitch']]
+        data.append(perception.imu[0])
+        data.append(perception.imu[1])
+        #print(data)
+
+        posture = classes[self.posture_classifier.predict([data])[0]]
+        # print(posture)
 
         return posture
 
 if __name__ == '__main__':
     agent = PostureRecognitionAgent()
-    agent.keyframes = hello()  # CHANGE DIFFERENT KEYFRAMES
+    agent.keyframes = hello()
     agent.run()
+
